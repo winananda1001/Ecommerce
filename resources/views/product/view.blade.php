@@ -1,35 +1,44 @@
 <x-app-layout>
-    <div class="container mx-auto">
+    <div  x-data="productItem({{ json_encode([
+                    'id' => $product->id,
+                    'slug' => $product->slug,
+                    'image' => $product->image ?: '/img/noimage.png',
+                    'title' => $product->title,
+                    'price' => $product->price,
+                    'quantity' => $product->quantity,
+                    'addToCartUrl' => route('cart.add', $product)
+                ]) }})" class="container mx-auto">
         <div class="grid gap-6 grid-cols-1 lg:grid-cols-5">
             <div class="lg:col-span-3">
                 <div
                     x-data="{
-  images: ['{{$product->image}}'],
-  activeImage: null,
-  prev() {
-      let index = this.images.indexOf(this.activeImage);
-      if (index === 0)
-          index = this.images.length;
-      this.activeImage = this.images[index - 1];
-  },
-  next() {
-      let index = this.images.indexOf(this.activeImage);
-      if (index === this.images.length - 1)
-          index = -1;
-      this.activeImage = this.images[index + 1];
-  },
-  init() {
-      this.activeImage = this.images.length > 0 ? this.images[0] : null
-  }
-}"
+                      images: {{$product->images->count() ?
+                 $product->images->map(fn($im) => $im->url) : json_encode(['/img/noimage.png'])}},
+                      activeImage: null,
+                      prev() {
+                          let index = this.images.indexOf(this.activeImage);
+                          if (index === 0)
+                              index = this.images.length;
+                          this.activeImage = this.images[index - 1];
+                      },
+                      next() {
+                          let index = this.images.indexOf(this.activeImage);
+                          if (index === this.images.length - 1)
+                              index = -1;
+                          this.activeImage = this.images[index + 1];
+                      },
+                      init() {
+                          this.activeImage = this.images.length > 0 ? this.images[0] : null
+                      }
+                    }"
                 >
                     <div class="relative">
                         <template x-for="image in images">
                             <div
                                 x-show="activeImage === image"
-                                class="aspect-w-3 aspect-h-2"
+                                class="w-full h-[240px] sm:h-[400px] flex items-center justify-center"
                             >
-                                <img :src="image" alt="" class="w-auto mx-auto"/>
+                                <img :src="image" alt="" class="w-auto h-auto max-h-full mx-auto"/>
                             </div>
                         </template>
                         <a
@@ -89,6 +98,11 @@
                     {{$product->title}}
                 </h1>
                 <div class="text-xl font-bold mb-6">${{$product->price}}</div>
+                @if ($product->quantity === 0)
+                    <div class="bg-red-400 text-white py-2 px-3 rounded mb-3">
+                        The product is out of stock
+                    </div>
+                @endif
                 <div class="flex items-center justify-between mb-5">
                     <label for="quantity" class="block font-bold mr-4">
                         Quantity
@@ -98,12 +112,15 @@
                         name="quantity"
                         x-ref="quantityEl"
                         value="1"
+                        min="1"
                         class="w-32 focus:border-purple-500 focus:outline-none rounded"
                     />
                 </div>
                 <button
-                    @click="addToCart(id, $refs.quantityEl.value)"
+                    :disabled="product.quantity === 0"
+                    @click="addToCart($refs.quantityEl.value)"
                     class="btn-primary py-4 text-lg flex justify-center min-w-0 w-full mb-6"
+                    :class="product.quantity === 0 ? 'cursor-not-allowed' : 'cursor-pointer'"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -127,7 +144,7 @@
                         x-collapse.min.120px
                         class="text-gray-500 wysiwyg-content"
                     >
-                        {{ $product->description }}
+                        {!! $product->description !!}
                     </div>
                     <p class="text-right">
                         <a
